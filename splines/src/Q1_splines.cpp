@@ -88,6 +88,90 @@ void mouse_callback(int mouse_x, int mouse_y) {
 	}
 };
 
+
+class CurveSegment {
+	point4 *control_points;
+	glm::mat4 coeff_matrix;
+public:
+	CurveSegment(point4 *cps, glm::mat4 matrix) {
+		control_points = cps;
+		coeff_matrix = matrix;
+	}
+	void draw() {
+		glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(point4), control_points, GL_STATIC_DRAW);
+		glPointSize(10.0f);
+		glDrawArrays(GL_POINTS, 0, 4);
+
+		point4 partial_result_x = coeff_matrix * point4(control_points[0][0], control_points[1][0], control_points[2][0], control_points[3][0]);
+		point4 partial_result_y = coeff_matrix * point4(control_points[0][1], control_points[1][1], control_points[2][1], control_points[3][1]);
+
+		for (int i = 0; i < num_increments; i++) {
+			xs[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_x);
+			ys[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_y);
+		}
+
+		for (int i = 0; i < num_increments; i++) {
+			vertices[i] = point4(xs[i], ys[i], 0.0, 1.0);
+		}
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glDrawArrays(GL_LINE_STRIP, 0, num_increments);
+	}
+
+};
+
+
+class Curve {
+public:
+	virtual void draw() = 0;
+	virtual void add_control_point(point4 cp) = 0;
+};
+
+
+class BezierCurve : public Curve {
+public:
+	virtual void draw() {
+		for (int i = 0; i < control_points.size() / 4; i++) {
+			CurveSegment seg = CurveSegment(&control_points[4 * i], bezier_matrix);
+			seg.draw();
+		}
+	}
+	virtual void add_control_point(point4 cp) {
+		control_points.push_back(cp);
+	}
+};
+
+
+class CatmullRomCurve : public Curve {
+public:
+	CatmullRomCurve() {};
+	virtual void draw() {
+		for (int i = 0; i < control_points.size() - 3; i++) {
+			CurveSegment seg = CurveSegment(&control_points[i], catmull_rom_matrix);
+			seg.draw();
+		}
+	}
+	virtual void add_control_point(point4 cp) {
+		control_points.push_back(cp);
+	}
+};
+
+class BSplineCurve : public Curve {
+public:
+	virtual void draw() {
+		for (int i = 0; i < control_points.size() - 3; i++) {
+			CurveSegment seg = CurveSegment(&control_points[i], b_spline_matrix);
+			seg.draw();
+		}
+	}
+	virtual void add_control_point(point4 cp) {
+		control_points.push_back(cp);
+	}
+};
+
+BezierCurve default_curve = BezierCurve();
+Curve *curve = &default_curve;
+
 //----------------------------------------------------------------------------
 
 // OpenGL initialization
@@ -132,78 +216,7 @@ init()
    control_points.push_back(point4(0.3, 0.0, 0.0, 1.0));
    control_points.push_back(point4(0.6, -0.5, 0.0, 1.0));
 
-   control_points.push_back(point4(0.7, 0.0, 0.0, 1.0));
-
 }
-
-
-
-class CurveSegment {
-	point4 *control_points;
-	glm::mat4 coeff_matrix;
-public:
-	CurveSegment(point4 *cps, glm::mat4 matrix) {
-		control_points = cps;
-		coeff_matrix = matrix;
-	}
-	void draw() {
-		glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(point4), control_points, GL_STATIC_DRAW);
-		glPointSize(10.0f);
-		glDrawArrays(GL_POINTS, 0, 4);
-
-		point4 partial_result_x = coeff_matrix * point4(control_points[0][0], control_points[1][0], control_points[2][0], control_points[3][0]);
-		point4 partial_result_y = coeff_matrix * point4(control_points[0][1], control_points[1][1], control_points[2][1], control_points[3][1]);
-
-		for (int i = 0; i < num_increments; i++) {
-			xs[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_x);
-			ys[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_y);
-		}
-
-		for (int i = 0; i < num_increments; i++) {
-			vertices[i] = point4(xs[i], ys[i], 0.0, 1.0);
-		}
-
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		glDrawArrays(GL_LINE_STRIP, 0, num_increments);
-	}
-
-};
-
-
-class Curve {
-public:
-	void add_control_point(point4 cp) {
-		control_points.push_back(cp);
-	}
-	virtual void draw() {}
-};
-Curve *curve;
-
-
-class BezierCurve {
-public:
-};
-
-
-class CatmullRomCurve: public Curve {
-public:
-	void draw() {
-		for (int i = 0; i < control_points.size() - 3; i++) {
-			CurveSegment seg = CurveSegment(&control_points[i], catmull_rom_matrix);
-			seg.draw();
-		}
-	}
-};
-
-class BSplineCurve : public Curve {
-public:
-	void draw() {
-		for (int i = 0; i < control_points.size() - 3; i++) {
-			CurveSegment seg = CurveSegment(&control_points[i], b_spline_matrix);
-			seg.draw();
-		}
-	}
-};
 
 
 
@@ -224,9 +237,12 @@ display( void )
    glUniformMatrix4fv(ModelView, 1, GL_FALSE, glm::value_ptr(model_view));
 
 
+
+   
    //CatmullRomCurve curve = CatmullRomCurve();
-   CatmullRomCurve q;
-   curve = &q;
+   //CatmullRomCurve q;
+   //BezierCurve q;
+   //curve = &q;
    curve->draw();
 
 
@@ -236,15 +252,25 @@ display( void )
 }
 
 //----------------------------------------------------------------------------
-
+BezierCurve bezier_curve;
+CatmullRomCurve catmull_rom_curve;
+BSplineCurve b_spline_curve;
+int curve_index = 0;
 void
 keyboard( unsigned char key, int x, int y )
 {
-    switch( key ) {
+     switch( key ) {
        case 033: // Escape Key
        case 'q': case 'Q':
           exit( EXIT_SUCCESS );
-          break;
+	   case ' ': //space bar
+		   if(curve_index == 0)
+			   curve = &catmull_rom_curve;
+		   else if(curve_index == 1)
+			   curve = &b_spline_curve;
+		   else
+			   curve = &bezier_curve;
+		   curve_index = (curve_index+1) % 3;
     }
 }
 
@@ -266,7 +292,9 @@ mouse(int button, int state, int mouse_x, int mouse_y)
 			}
 		}
 		if (dragging_point_index == -1) { // new point
-			curve->add_control_point(point4(x, y, 0.0, 1.0));
+			point4 new_point = point4(x, y, 0.0, 1.0);
+			curve->add_control_point(new_point);
+
 		}
 	}
 	else if (state == GLUT_UP) {
