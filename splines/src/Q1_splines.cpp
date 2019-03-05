@@ -1,6 +1,7 @@
 // Display a cube, using glDrawElements
 
 #include "common.h"
+#include <iostream>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -20,14 +21,7 @@ int height = 640;
 
 int dragging_point_index = -1;
 
-//const int num_control_points = 4;
 std::vector<point4> control_points;
-//point4 control_points[num_control_points] = {
-	//point4(-0.5, -0.5, 0.0, 1.0),
-	//point4(-0.1, 0.0, 0.0, 1.0),
-	//point4(0.3, 0.0, 0.0, 1.0),
-	//point4(0.6, -0.5, 0.0, 1.0)
-//};
 
 
 glm::mat4 bezier_matrix = transpose(glm::mat4(
@@ -220,6 +214,8 @@ init()
    control_points.push_back(point4(0.3, 0.0, 0.0, 1.0));
    control_points.push_back(point4(0.6, -0.5, 0.0, 1.0));
 
+   std::cout << "Defaulting to Bezier Curve\n";
+
 }
 
 
@@ -240,17 +236,7 @@ display( void )
    model_view = trans * rot;
    glUniformMatrix4fv(ModelView, 1, GL_FALSE, glm::value_ptr(model_view));
 
-
-
-   
-   //CatmullRomCurve curve = CatmullRomCurve();
-   //CatmullRomCurve q;
-   //BezierCurve q;
-   //curve = &q;
    curve->draw();
-
-
-   
 
    glutSwapBuffers();
 }
@@ -268,12 +254,18 @@ keyboard( unsigned char key, int x, int y )
        case 'q': case 'Q':
           exit( EXIT_SUCCESS );
 	   case ' ': //space bar
-		   if(curve_index == 0)
+		   if (curve_index == 0) {
 			   curve = &catmull_rom_curve;
-		   else if(curve_index == 1)
+			   std::cout << "Switching to Catmull-Rom Curve\n";
+		   }
+		   else if (curve_index == 1) {
 			   curve = &b_spline_curve;
-		   else
+			   std::cout << "Switching to Uniform B-Spline Curve\n";
+		   }
+		   else {
 			   curve = &bezier_curve;
+			   std::cout << "Switching to Bezier Curve\n";
+		   }
 		   curve_index = (curve_index+1) % 3;
     }
 }
@@ -296,6 +288,7 @@ mouse(int button, int state, int mouse_x, int mouse_y)
 			}
 		}
 		if (dragging_point_index == -1) { // new point
+			std::cout << "Adding new control point\n";
 			point4 new_point = point4(x, y, 0.0, 1.0);
 			curve->add_control_point(new_point);
 
