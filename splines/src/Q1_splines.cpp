@@ -131,12 +131,16 @@ public:
 class BezierCurve : public Curve {
 public:
 	virtual void draw() {
-		for (int i = 0; i < control_points.size() / 4; i++) {
-			CurveSegment seg = CurveSegment(&control_points[4 * i], bezier_matrix);
+		for (int i = 0; i < control_points.size() / 3; i++) {
+			CurveSegment seg = CurveSegment(&control_points[3 * i], bezier_matrix);
 			seg.draw();
 		}
 	}
 	virtual void add_control_point(point4 cp) {
+		point4 p2 = control_points.end()[-2];
+		point4 p3 = control_points.end()[-1];
+		control_points.push_back(p3 + 0.3f*(p3-p2));
+		control_points.push_back(0.5f*(cp + p3));
 		control_points.push_back(cp);
 	}
 };
