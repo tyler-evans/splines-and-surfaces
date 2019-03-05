@@ -81,22 +81,10 @@ void mouse_callback(int mouse_x, int mouse_y) {
 	point2 mouse_coords = mouse_to_world(mouse_x, mouse_y);
 	float x = mouse_coords.x;
 	float y = mouse_coords.y;
-	bool new_point = true;
 
-	for (int i = 0; i < control_points.size(); i++) {
-		if (dragging_point_index != -1) {
-			i = dragging_point_index;
-		}
-
-		if (length(control_points[i] - point4(x, y, 0.0, 1.0)) < 0.1) {
-			dragging_point_index = i;
-			control_points[i].x = x;
-			control_points[i].y = y;
-			new_point = false;
-			break;
-		}
-		else if (dragging_point_index != -1)
-			dragging_point_index = -1;
+	if (dragging_point_index != -1) {
+		control_points[dragging_point_index].x = x;
+		control_points[dragging_point_index].y = y;
 	}
 };
 
@@ -187,7 +175,9 @@ public:
 	void add_control_point(point4 cp) {
 		control_points.push_back(cp);
 	}
+	virtual void draw() {}
 };
+Curve *curve;
 
 
 class BezierCurve {
@@ -235,9 +225,9 @@ display( void )
 
 
    //CatmullRomCurve curve = CatmullRomCurve();
-   BSplineCurve curve = BSplineCurve();
-
-   curve.draw();
+   CatmullRomCurve q;
+   curve = &q;
+   curve->draw();
 
 
    
@@ -261,10 +251,27 @@ keyboard( unsigned char key, int x, int y )
 //----------------------------------------------------------------------------
 
 void
-mouse( int button, int state, int x, int y )
+mouse(int button, int state, int mouse_x, int mouse_y)
 {
-	if (state == GLUT_UP)
+	if (state == GLUT_DOWN) {
+		point2 mouse_coords = mouse_to_world(mouse_x, mouse_y);
+		float x = mouse_coords.x;
+		float y = mouse_coords.y;
 		dragging_point_index = -1;
+
+		for (int i = 0; i < control_points.size(); i++) {
+			if (length(control_points[i] - point4(x, y, 0.0, 1.0)) < 0.1) {
+				dragging_point_index = i;
+				break;
+			}
+		}
+		if (dragging_point_index == -1) { // new point
+			curve->add_control_point(point4(x, y, 0.0, 1.0));
+		}
+	}
+	else if (state == GLUT_UP) {
+		dragging_point_index = -1;
+	}
 }
 
 //----------------------------------------------------------------------------
