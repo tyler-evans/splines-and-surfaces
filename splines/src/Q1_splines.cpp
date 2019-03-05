@@ -1,6 +1,7 @@
 // Display a cube, using glDrawElements
 
 #include "common.h"
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,26 +20,40 @@ int height = 640;
 
 int dragging_point_index = -1;
 
+//const int num_control_points = 4;
+std::vector<point4> control_points;
+//point4 control_points[num_control_points] = {
+	//point4(-0.5, -0.5, 0.0, 1.0),
+	//point4(-0.1, 0.0, 0.0, 1.0),
+	//point4(0.3, 0.0, 0.0, 1.0),
+	//point4(0.6, -0.5, 0.0, 1.0)
+//};
 
-float bezier_array[16] = {
+
+glm::mat4 bezier_matrix = transpose(glm::mat4(
 	-1.0, 3.0, -3.0, 1.0,
 	3.0, -6.0, 3.0, 0.0,
 	-3.0, 3.0, 0.0, 0.0,
 	1.0, 0.0, 0.0, 0.0
-};
-glm::mat4 bezier_matrix = glm::make_mat4(bezier_array);
+));
+
+// Hermite matrix * catmull-rom coefficient matrix
+glm::mat4 catmull_rom_matrix = transpose(glm::mat4(
+	-1.0, 3.0, -3.0, 1.0,
+	2.0, -5.0, 4.0, -1.0,
+	-1.0, 0.0, 1.0, 0.0,
+	0.0, 2.0, 0.0, 0.0
+)) / 2.0f;
+
+glm::mat4 b_spline_matrix = transpose(glm::mat4(
+	-1.0, 3.0, -3.0, 1.0,
+	3.0, -6.0, 3.0, 0.0,
+	-3.0, 0.0, 3.0, 0.0,
+	1.0, 4.0, 1.0, 0.0
+)) / 6.0f;
 
 
-const int num_control_points = 4;
-point4 control_points[num_control_points] = {
-	point4(-0.5, -0.5, 0.0, 1.0),
-	point4(-0.1, 0.0, 0.0, 1.0),
-	point4(0.3, 0.0, 0.0, 1.0),
-	point4(0.6, -0.5, 0.0, 1.0)
-};
-
-
-const int num_increments = 50;
+const int num_increments = 100;
 float xs[num_increments];
 float ys[num_increments];
 
@@ -62,43 +77,22 @@ float time_multiply(float t, point4 v) {
 };
 
 
-void draw_bezier_curve(point4 *control_points) {
-
-	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(point4), control_points, GL_STATIC_DRAW);
-	glPointSize(10.0f);
-	glDrawArrays(GL_POINTS, 0, 4);
-
-	point4 bezier_partial_result_x = bezier_matrix * point4(control_points[0][0], control_points[1][0], control_points[2][0], control_points[3][0]);
-	point4 bezier_partial_result_y = bezier_matrix * point4(control_points[0][1], control_points[1][1], control_points[2][1], control_points[3][1]);
-
-	for (int i = 0; i < num_increments; i++) {
-		xs[i] = time_multiply(1.0 / (num_increments - 1) * i, bezier_partial_result_x);
-		ys[i] = time_multiply(1.0 / (num_increments - 1) * i, bezier_partial_result_y);
-	}
-
-
-	for (int i = 0; i < num_increments; i++) {
-		vertices[i] = point4(xs[i], ys[i], 0.0, 1.0);
-	}
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glDrawArrays(GL_LINE_STRIP, 0, num_increments);
-};
-
-
 void mouse_callback(int mouse_x, int mouse_y) {
 	point2 mouse_coords = mouse_to_world(mouse_x, mouse_y);
 	float x = mouse_coords.x;
 	float y = mouse_coords.y;
+	bool new_point = true;
 
-	for (int i = 0; i < num_control_points; i++) {
-		if (dragging_point_index != -1)
+	for (int i = 0; i < control_points.size(); i++) {
+		if (dragging_point_index != -1) {
 			i = dragging_point_index;
+		}
 
 		if (length(control_points[i] - point4(x, y, 0.0, 1.0)) < 0.1) {
 			dragging_point_index = i;
 			control_points[i].x = x;
 			control_points[i].y = y;
+			new_point = false;
 			break;
 		}
 		else if (dragging_point_index != -1)
@@ -122,7 +116,7 @@ init()
    // Create and initialize a buffer object
    glGenBuffers( 1, &buffer );
    glBindBuffer( GL_ARRAY_BUFFER, buffer );
-   glBufferData(GL_ARRAY_BUFFER, sizeof(control_points), control_points , GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices , GL_STATIC_DRAW);
 
 
    // Load shaders and use the resulting shader program
@@ -142,7 +136,84 @@ init()
 
    glutMotionFunc(mouse_callback);
 
+
+
+
+   control_points.push_back(point4(-0.5, -0.5, 0.0, 1.0));
+   control_points.push_back(point4(-0.1, 0.0, 0.0, 1.0));
+   control_points.push_back(point4(0.3, 0.0, 0.0, 1.0));
+   control_points.push_back(point4(0.6, -0.5, 0.0, 1.0));
+
+   control_points.push_back(point4(0.7, 0.0, 0.0, 1.0));
+
 }
+
+
+
+class CurveSegment {
+	point4 *control_points;
+	glm::mat4 coeff_matrix;
+public:
+	CurveSegment(point4 *cps, glm::mat4 matrix) {
+		control_points = cps;
+		coeff_matrix = matrix;
+	}
+	void draw() {
+		glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(point4), control_points, GL_STATIC_DRAW);
+		glPointSize(10.0f);
+		glDrawArrays(GL_POINTS, 0, 4);
+
+		point4 partial_result_x = coeff_matrix * point4(control_points[0][0], control_points[1][0], control_points[2][0], control_points[3][0]);
+		point4 partial_result_y = coeff_matrix * point4(control_points[0][1], control_points[1][1], control_points[2][1], control_points[3][1]);
+
+		for (int i = 0; i < num_increments; i++) {
+			xs[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_x);
+			ys[i] = time_multiply(1.0 / (num_increments - 1) * i, partial_result_y);
+		}
+
+		for (int i = 0; i < num_increments; i++) {
+			vertices[i] = point4(xs[i], ys[i], 0.0, 1.0);
+		}
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glDrawArrays(GL_LINE_STRIP, 0, num_increments);
+	}
+
+};
+
+
+class Curve {
+public:
+	void add_control_point(point4 cp) {
+		control_points.push_back(cp);
+	}
+};
+
+
+class BezierCurve {
+public:
+};
+
+
+class CatmullRomCurve: public Curve {
+public:
+	void draw() {
+		for (int i = 0; i < control_points.size() - 3; i++) {
+			CurveSegment seg = CurveSegment(&control_points[i], catmull_rom_matrix);
+			seg.draw();
+		}
+	}
+};
+
+class BSplineCurve : public Curve {
+public:
+	void draw() {
+		for (int i = 0; i < control_points.size() - 3; i++) {
+			CurveSegment seg = CurveSegment(&control_points[i], b_spline_matrix);
+			seg.draw();
+		}
+	}
+};
 
 
 
@@ -163,7 +234,12 @@ display( void )
    glUniformMatrix4fv(ModelView, 1, GL_FALSE, glm::value_ptr(model_view));
 
 
-   draw_bezier_curve(control_points);
+   //CatmullRomCurve curve = CatmullRomCurve();
+   BSplineCurve curve = BSplineCurve();
+
+   curve.draw();
+
+
    
 
    glutSwapBuffers();
@@ -206,7 +282,6 @@ reshape( int w, int h )
    glViewport( 0, 0, w, h );
 
    GLfloat aspect = GLfloat(w)/h;
-   //glm::mat4  projection = glm::perspective( glm::radians(45.0f), aspect, 0.5f, 3.0f );
    glm::mat4 projection;
 
    glUniformMatrix4fv( Projection, 1, GL_FALSE, glm::value_ptr(projection) );
