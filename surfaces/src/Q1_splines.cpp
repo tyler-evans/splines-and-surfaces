@@ -16,12 +16,7 @@ typedef glm::vec3  point3;
 typedef glm::vec2  point2;
 
 const int num_increments = 8;
-point4 line_vertices[num_increments*2];
-
-
-
 bool show_control_points = false;
-
 
 glm::mat4 M = glm::mat4(
 	-1.0, 3.0, -3.0, 1.0,
@@ -39,7 +34,6 @@ GLfloat  Theta[NumAxes] = { -45.0, 0.0, 0.0 };
 GLuint  ModelView, Projection;
 
 
-
 class PatchIndex {
 public:
 	std::vector<int> cp_idxs;
@@ -47,7 +41,6 @@ public:
 		cp_idxs = cp_idxs_;
 	}
 };
-
 std::vector<point3> loaded_points;
 std::vector<PatchIndex> patch_indices;
 void load_patch(char *filename, int *patches, int *verticies)
@@ -78,9 +71,6 @@ void load_patch(char *filename, int *patches, int *verticies)
 		loaded_points.push_back(point3(x, y, z));
 	}
 }
-
-
-
 
 class BezierPatch {
 public:
@@ -119,11 +109,8 @@ public:
 			glDrawArrays(GL_LINE_STRIP, 0, num_increments);
 			glDrawArrays(GL_LINE_STRIP, num_increments, num_increments);
 		}
-
-
 	}
 };
-
 
 class BezierPatchCollection {
 	std::vector<BezierPatch> patches;
@@ -163,10 +150,6 @@ init()
    // Create and initialize a buffer object
    glGenBuffers( 1, &buffer );
    glBindBuffer( GL_ARRAY_BUFFER, buffer );
-   //glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
-
-   //glGenBuffers(1, &other_buffer);
-
 
    // Load shaders and use the resulting shader program
    GLuint program = InitShader( "vshader6.glsl", "fshader5.glsl" );
@@ -184,19 +167,11 @@ init()
    glClearColor( 1.0, 1.0, 1.0, 1.0 );
    glPointSize(10.0f);
 
-
-
-
-
-
    std::string filename_str = "teapot";
    char *filename = &filename_str[0u];
    int num_patches = 0;
    int num_points = 0;
    load_patch(filename, &num_patches, &num_points);
-
-   patch_indices = patch_indices;
-   loaded_points = loaded_points;
 
    std::vector<point3> all_points;
    for (int i = 0; i < patch_indices.size(); i++) {
@@ -205,24 +180,10 @@ init()
 		   all_points.push_back(loaded_points[cp_idxs[j]-1]);
    }
 
-
    for (int i = 0; i < all_points.size() / 16; i++)
 	   patches.add_patch(BezierPatch(&all_points[16*i]));
-
 }
-
-
-
-
 //----------------------------------------------------------------------------
-
-
-
-
-
-
-
-
 void
 display(void)
 {
@@ -241,12 +202,9 @@ display(void)
 	model_view = view_trans * scale * rot * trans;
 	glUniformMatrix4fv(ModelView, 1, GL_FALSE, glm::value_ptr(model_view));
 
-
-
 	patches.draw();
 	if(show_control_points)
 		patches.draw_cps();
-
 
    glutSwapBuffers();
 }
