@@ -292,12 +292,6 @@ void
 reshape( int w, int h )
 {
    glViewport( 0, 0, w, h );
-
-   GLfloat aspect = GLfloat(w)/h;
-   glm::mat4 projection;
-
-   glUniformMatrix4fv( Projection, 1, GL_FALSE, glm::value_ptr(projection) );
-
    width = w;
    height = h;
 }
