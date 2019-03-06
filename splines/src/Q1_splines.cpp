@@ -1,5 +1,3 @@
-// Display a cube, using glDrawElements
-
 #include "common.h"
 #include <iostream>
 #include <vector>
@@ -8,7 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-const char *WINDOW_TITLE = "Cube with Indices";
+const char *WINDOW_TITLE = "Splines";
 const double FRAME_RATE_MS = 1000.0/60.0;
 
 typedef glm::vec4  color4;
@@ -17,12 +15,9 @@ typedef glm::vec2  point2;
 
 int width = 640;
 int height = 640;
-
-
 int dragging_point_index = -1;
 
 std::vector<point4> control_points;
-
 
 glm::mat4 bezier_matrix = transpose(glm::mat4(
 	-1.0, 3.0, -3.0, 1.0,
@@ -52,12 +47,6 @@ float xs[num_increments];
 float ys[num_increments];
 
 point4 vertices[num_increments];
-
-// Array of rotation angles (in degrees) for each coordinate axis
-enum { Xaxis = 0, Yaxis = 1, Zaxis = 2, NumAxes = 3 };
-int      Axis = Xaxis;
-GLfloat  Theta[NumAxes] = { 0.0, 0.0, 0.0 };
-
 GLuint  ModelView, Projection;
 
 
@@ -206,16 +195,12 @@ init()
 
    glutMotionFunc(mouse_callback);
 
-
-
-
    control_points.push_back(point4(-0.5, -0.5, 0.0, 1.0));
    control_points.push_back(point4(-0.1, 0.0, 0.0, 1.0));
    control_points.push_back(point4(0.3, 0.0, 0.0, 1.0));
    control_points.push_back(point4(0.6, -0.5, 0.0, 1.0));
 
    std::cout << "Defaulting to Bezier Curve\n";
-
 }
 
 
@@ -300,12 +285,7 @@ mouse(int button, int state, int mouse_x, int mouse_y)
 }
 
 //----------------------------------------------------------------------------
-
-void
-update( void )
-{
-}
-
+void update( void ){}
 //----------------------------------------------------------------------------
 
 void
