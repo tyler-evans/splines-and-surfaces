@@ -15,8 +15,7 @@ typedef glm::vec4  point4;
 typedef glm::vec3  point3;
 typedef glm::vec2  point2;
 
-
-const int num_increments = 10;
+const int num_increments = 8;
 point4 line_vertices[num_increments*2];
 
 
@@ -34,8 +33,8 @@ glm::mat4 M = glm::mat4(
 
 // Array of rotation angles (in degrees) for each coordinate axis
 enum { Xaxis = 0, Yaxis = 1, Zaxis = 2, NumAxes = 3 };
-int      Axis = Xaxis;
-GLfloat  Theta[NumAxes] = { 0.0, 0.0, 0.0 };
+int      Axis = Zaxis;
+GLfloat  Theta[NumAxes] = { -45.0, 0.0, 0.0 };
 
 GLuint  ModelView, Projection;
 
@@ -86,6 +85,7 @@ void load_patch(char *filename, int *patches, int *verticies)
 class BezierPatch {
 public:
 	glm::mat4 MGM_x, MGM_y, MGM_z;
+	point4 line_vertices[num_increments * 2];
 	BezierPatch(point3 *cps_) {
 		MGM_x = BezierPatch::construct_MGM(BezierPatch::get_slice(cps_, 0));
 		MGM_y = BezierPatch::construct_MGM(BezierPatch::get_slice(cps_, 1));
@@ -117,8 +117,10 @@ public:
 			}
 			glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
 			glDrawArrays(GL_LINE_STRIP, 0, num_increments);
-			glDrawArrays(GL_LINE_STRIP, num_increments, num_increments*2);
+			glDrawArrays(GL_LINE_STRIP, num_increments, num_increments);
 		}
+
+
 	}
 };
 
@@ -136,12 +138,12 @@ public:
 		}
 	}
 	void draw_cps() {
-		glPointSize(10.0f);
 		std::vector<point4> to_draw;
 		for (int i = 0; i < loaded_points.size(); i++)
 			to_draw.push_back(point4(loaded_points[i], 1.0));
-		glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(point4), &to_draw[0], GL_STATIC_DRAW);
-		//glDrawArrays(GL_POINTS, 0, 1);
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(point4)*to_draw.size(), &to_draw[0], GL_STATIC_DRAW);
+		glDrawArrays(GL_POINTS, 0, to_draw.size());
 	}
 };
 BezierPatchCollection patches;
@@ -158,11 +160,12 @@ init()
    glBindVertexArray( vao );
 
    GLuint buffer;
-
    // Create and initialize a buffer object
    glGenBuffers( 1, &buffer );
    glBindBuffer( GL_ARRAY_BUFFER, buffer );
-   glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+   //glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+
+   //glGenBuffers(1, &other_buffer);
 
 
    // Load shaders and use the resulting shader program
@@ -179,7 +182,7 @@ init()
 
    glEnable( GL_DEPTH_TEST );
    glClearColor( 1.0, 1.0, 1.0, 1.0 );
-
+   glPointSize(10.0f);
 
 
 
@@ -206,10 +209,6 @@ init()
    for (int i = 0; i < all_points.size() / 16; i++)
 	   patches.add_patch(BezierPatch(&all_points[16*i]));
 
-
-   patches.draw();
-
-
 }
 
 
@@ -231,28 +230,21 @@ display(void)
 
 
 	//  Generate the model-view matrix
-	const glm::vec3 viewer_pos(0.0, 0.0, 0.0);
-	glm::mat4 trans, rot, scale, model_view;
+	const glm::vec3 viewer_pos(0.0, 0.0, 2.0);
+	glm::mat4 view_trans, trans, rot, scale, model_view;
 	rot = glm::rotate(rot, glm::radians(Theta[Xaxis]), glm::vec3(1, 0, 0));
 	rot = glm::rotate(rot, glm::radians(Theta[Yaxis]), glm::vec3(0, 1, 0));
 	rot = glm::rotate(rot, glm::radians(Theta[Zaxis]), glm::vec3(0, 0, 1));
-	trans = glm::translate(trans, -viewer_pos);
-	scale = glm::scale(scale, glm::vec3(0.3, 0.3, 0.3));
-	model_view = trans * rot * scale;
+	view_trans = glm::translate(view_trans, -viewer_pos);
+	scale = glm::scale(scale, glm::vec3(0.18, 0.18, 0.18));
+	trans = glm::translate(trans, glm::vec3(0.0, 0.0, -0.7));
+	model_view = view_trans * scale * rot * trans;
 	glUniformMatrix4fv(ModelView, 1, GL_FALSE, glm::value_ptr(model_view));
 
 
-	//glPointSize(10.0f);
-	//glDrawArrays(GL_POINTS, 0, 16);
 
-
-
-	
 	patches.draw();
-	//patches.draw_cps();
-	//line_vertices = line_vertices;
-	//glDrawArrays(GL_LINE_STRIP, 0, num_increments);
-	//glDrawArrays(GL_LINE_STRIP, num_increments, num_increments * 2);
+	patches.draw_cps();
 
 
    glutSwapBuffers();
@@ -300,12 +292,12 @@ update(void)
 //----------------------------------------------------------------------------
 
 void
-reshape( int w, int h )
+reshape( int width, int height )
 {
-   glViewport( 0, 0, w, h );
+	glViewport(0, 0, width, height);
 
-   GLfloat aspect = GLfloat(w)/h;
-   glm::mat4 projection;
+	GLfloat aspect = GLfloat(width) / height;
+	glm::mat4  projection = glm::perspective(glm::radians(45.0f), aspect, 0.5f, 3.0f);
 
-   glUniformMatrix4fv( Projection, 1, GL_FALSE, glm::value_ptr(projection) );
+	glUniformMatrix4fv(Projection, 1, GL_FALSE, glm::value_ptr(projection));
 }
