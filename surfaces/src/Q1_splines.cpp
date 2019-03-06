@@ -16,28 +16,8 @@ typedef glm::vec3  point3;
 typedef glm::vec2  point2;
 
 
-const int num_increments = 5;
-point4 line_vertices[num_increments];
-
-
-point3 G_array[16] = {
-point3(1.4,0.0,2.4),
-point3(1.4,-0.784,2.4),
-point3(0.784,-1.4,2.4),
-point3(0.0,-1.4,2.4),
-point3(1.3375,0.0,2.53125),
-point3(1.3375,-0.749,2.53125),
-point3(0.749,-1.3375,2.53125),
-point3(0.0,-1.3375,2.53125),
-point3(1.4375,0.0,2.53125),
-point3(1.4375,-0.805,2.53125),
-point3(0.805,-1.4375,2.53125),
-point3(0.0,-1.4375,2.53125),
-point3(1.5,0.0,2.4),
-point3(1.5,-0.84,2.4),
-point3(0.84,-1.5,2.4),
-point3(0.0,-1.5,2.4)
-};
+const int num_increments = 10;
+point4 line_vertices[num_increments*2];
 
 
 
@@ -133,16 +113,12 @@ public:
 				float v = 1.0 / (num_increments - 1) * j;
 
 				line_vertices[j] = BezierPatch::patch_point(MGM_x, MGM_y, MGM_z, u, v);
-				glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
-				glDrawArrays(GL_LINE_STRIP, 0, num_increments);
+				line_vertices[num_increments+j] = BezierPatch::patch_point(MGM_x, MGM_y, MGM_z, v, u);
 			}
+			glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+			glDrawArrays(GL_LINE_STRIP, 0, num_increments);
+			glDrawArrays(GL_LINE_STRIP, num_increments, num_increments*2);
 		}
-	}
-	void draw_cps() {
-		glPointSize(10.0f);
-		//point4 to_draw[16];
-		//glBufferData(GL_ARRAY_BUFFER, 16*sizeof(point4), cps, GL_STATIC_DRAW);
-		glDrawArrays(GL_POINTS, 0, 16);
 	}
 };
 
@@ -157,8 +133,15 @@ public:
 	void draw() {
 		for (int i = 0; i < patches.size(); i++) {
 			patches[i].draw();
-			patches[i].draw_cps();
 		}
+	}
+	void draw_cps() {
+		glPointSize(10.0f);
+		std::vector<point4> to_draw;
+		for (int i = 0; i < loaded_points.size(); i++)
+			to_draw.push_back(point4(loaded_points[i], 1.0));
+		glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(point4), &to_draw[0], GL_STATIC_DRAW);
+		//glDrawArrays(GL_POINTS, 0, 1);
 	}
 };
 BezierPatchCollection patches;
@@ -223,6 +206,10 @@ init()
    for (int i = 0; i < all_points.size() / 16; i++)
 	   patches.add_patch(BezierPatch(&all_points[16*i]));
 
+
+   patches.draw();
+
+
 }
 
 
@@ -261,8 +248,12 @@ display(void)
 
 
 	
-	//patch.draw();
 	patches.draw();
+	//patches.draw_cps();
+	//line_vertices = line_vertices;
+	//glDrawArrays(GL_LINE_STRIP, 0, num_increments);
+	//glDrawArrays(GL_LINE_STRIP, num_increments, num_increments * 2);
+
 
    glutSwapBuffers();
 }
