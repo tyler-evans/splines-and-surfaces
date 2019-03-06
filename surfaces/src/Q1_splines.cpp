@@ -20,7 +20,7 @@ point4 line_vertices[num_increments*2];
 
 
 
-
+bool show_control_points = false;
 
 
 glm::mat4 M = glm::mat4(
@@ -244,7 +244,8 @@ display(void)
 
 
 	patches.draw();
-	patches.draw_cps();
+	if(show_control_points)
+		patches.draw_cps();
 
 
    glutSwapBuffers();
@@ -258,7 +259,8 @@ keyboard( unsigned char key, int x, int y )
        case 033: // Escape Key
        case 'q': case 'Q':
           exit( EXIT_SUCCESS );
-		  break;
+	   case ' ':
+		   show_control_points = !show_control_points;
     }
 }
 
