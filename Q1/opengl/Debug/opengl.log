@@ -1,0 +1,7 @@
+﻿  Q1_splines.cpp
+c:\users\till\desktop\evanstylergraphicsa2\q1\src\q1_splines.cpp(88): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\till\desktop\evanstylergraphicsa2\q1\src\q1_splines.cpp(89): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\till\desktop\evanstylergraphicsa2\q1\src\q1_splines.cpp(140): warning C4018: '<': signed/unsigned mismatch
+c:\users\till\desktop\evanstylergraphicsa2\q1\src\q1_splines.cpp(154): warning C4018: '<': signed/unsigned mismatch
+c:\users\till\desktop\evanstylergraphicsa2\q1\src\q1_splines.cpp(275): warning C4018: '<': signed/unsigned mismatch
+  opengl.vcxproj -> C:\Users\Till\Desktop\EvansTylerGraphicsA2\Q1\\build\opengl.exe
